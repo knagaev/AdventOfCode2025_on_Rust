@@ -1,3 +1,4 @@
+use std::collections::BTreeSet;
 use std::fs;
 use std::io::{self, BufRead, BufReader};
 
@@ -6,98 +7,119 @@ pub fn local_main() -> io::Result<()> {
     let file = fs::File::open(FILE_PATH)?;
     let mut reader = BufReader::new(file);
 
-    let mut first_line = String::new();
-    reader.read_line(&mut first_line)?;
+    let mut line = String::new();
+    reader.read_line(&mut line)?;
 
-    let mut total_invalid_ids_sum = 0;
-    for s in first_line.trim().split(',').filter(|s| !s.is_empty()) {
-        total_invalid_ids_sum += calc_invalid_ids_sum(s).ok_or_else(|| {
-            io::Error::new(
-                io::ErrorKind::InvalidData,
-                "calc_invalid_ids не вернула результат!",
+    let ranges: Vec<(u128, u128)> = line
+        .trim()
+        .split(',')
+        .filter(|s| !s.is_empty())
+        .map(|s| {
+            let (start_str, end_str) = s.split_once('-').unwrap();
+            (
+                start_str.parse::<u128>().unwrap(),
+                end_str.parse::<u128>().unwrap(),
             )
-        })?;
-        println!("total_invalid_ids_sum {:?}", total_invalid_ids_sum);
+        })
+        .collect();
+
+    if ranges.is_empty() {
+        println!("Нет диапазонов для обработки");
+        return Ok(());
     }
+
+    let max_id = ranges.iter().map(|(_, e)| e).max().unwrap();
+
+    // генерируем все "невалидные" ID для первой задачи
+    let invalid_ids = generate_invalid_ids(*max_id);
+
+    let mut total_sum: u128 = 0;
+
+    for (start, end) in &ranges {
+        // находим все invalid_ids в диапазоне [start, end]
+        // так как invalid_ids отсортированы (BTreeSet), можно использовать range
+        //println!("start {:?}, end {:?}", start, end);
+        for &id in invalid_ids.range(*start..=*end) {
+            //println!("id  {:?}", id);
+            total_sum += id;
+        }
+    }
+    println!("Сумма всех невалидных ID в первой задаче: {}", total_sum);
+
+    // генерируем все "невалидные" ID для второй задачи
+    let invalid_ids_2 = generate_invalid_ids_2(*max_id);
+
+    //for id in &invalid_ids_2 {
+    //    println!("{}", id);
+    //}
+    let mut total_sum: u128 = 0;
+
+    for (start, end) in &ranges {
+        // находим все invalid_ids в диапазоне [start, end]
+        // так как invalid_ids отсортированы (BTreeSet, а не HashSet), можно использовать range
+        for &id in invalid_ids_2.range(*start..=*end) {
+            //println!("id: {}", id);
+            total_sum += id;
+        }
+    }
+    println!("Сумма всех невалидных ID во второй задаче: {}", total_sum);
 
     Ok(())
 }
 
-fn calc_invalid_ids_sum(ids_range: &str) -> Option<u128> {
-    println!("{:?}", ids_range);
+fn generate_invalid_ids(max_id: u128) -> BTreeSet<u128> {
+    let mut ids = BTreeSet::new(); // упорядоченный set для поиска по range
 
-    let (start_range, end_range) = ids_range.split_once('-')?;
+    // максимальная длина числа в десятичной записи
+    let max_len = if max_id == 0 { 1 } else { max_id.ilog10() + 1 };
 
-    let start_range = start_range.parse::<u128>().ok()?;
-    let end_range = end_range.parse::<u128>().ok()?;
-    println!("start_range {:?} end_width {:?}", start_range, end_range);
+    // паттерн может быть длиной от 1 до max_len / 2 (так как повтор минимум 2 раза)
+    for pattern_len in 1..=max_len / 2 {
+        let start_pattern = 10_u128.pow(pattern_len - 1);
+        let end_pattern = 10_u128.pow(pattern_len);
 
-    let start_width = start_range.ilog10() + 1;
-    let end_width = end_range.ilog10() + 1;
-
-    println!("start_width {:?} end_width {:?}", start_width, end_width);
-
-    // в случае нечетного количества знаков получаем меньше на единицу
-    let start_half_width = start_width / 2;
-    let end_half_width = end_width / 2;
-
-    println!(
-        "start_half_width {:?} end_half_width {:?}",
-        start_half_width, end_half_width
-    );
-
-    let min_pattern = if !start_width.is_multiple_of(2) {
-        10_u128.pow(start_half_width as u32)
-    } else {
-        let left_part = start_range / 10_u128.pow(start_half_width as u32);
-        let right_part = start_range % 10_u128.pow(start_half_width as u32);
-        println!("left_part {:?} right_part {:?}", left_part, right_part);
-        if right_part == 0 {
-            left_part - 1
-        } else {
-            if left_part < right_part {
-                left_part + 1
-            } else {
-                left_part
-            }
+        for pattern in start_pattern..end_pattern {
+            ids.insert(pattern * (1 + 10_u128.pow(pattern_len)));
         }
-    };
-    println!("min_pattern {:?}", min_pattern);
-
-    let max_pattern = if !end_width.is_multiple_of(2) {
-        10_u128.pow(end_half_width as u32) - 1u128
-    } else {
-        let left_part = end_range / 10_u128.pow(end_half_width as u32);
-        let right_part = end_range % 10_u128.pow(end_half_width as u32);
-        println!("left_part {:?} right_part {:?}", left_part, right_part);
-        if right_part == 0 {
-            left_part - 1
-        } else {
-            if left_part > right_part {
-                left_part - 1
-            } else {
-                left_part
-            }
-        }
-    };
-    println!("max_pattern {:?}", max_pattern);
-
-    //let mut invalid_ids_cnt = 0;
-    let mut invalid_ids_sum = 0;
-
-    let aligned_start_half_width = start_width.div_ceil(2);
-
-    for i in aligned_start_half_width..=end_half_width {
-        println!("i {:?}", i);
-        let mx = max_pattern.min(10_u128.pow(i as u32) - 1);
-        let mn = min_pattern.max(10_u128.pow(i as u32 - 1));
-        println!("mn {:?} mx {:?}", mn, mx);
-        //invalid_ids_cnt += 1 + mx - mn;
-        let half_invalid_ids_sum = (mn + mx) * (1 + mx - mn) / 2;
-        println!("half_invalid_ids_sum {:?}", half_invalid_ids_sum);
-        invalid_ids_sum += half_invalid_ids_sum + half_invalid_ids_sum * 10_u128.pow(i as u32);
-        println!("half_invalid_ids_sum {:?}", half_invalid_ids_sum);
     }
 
-    Some(invalid_ids_sum)
+    ids
+}
+
+fn generate_invalid_ids_2(max_id: u128) -> BTreeSet<u128> {
+    let mut ids = BTreeSet::new(); // упорядоченный set для поиска по range
+
+    // максимальная длина числа в десятичной записи
+    let max_len = if max_id == 0 { 1 } else { max_id.ilog10() + 1 };
+    //println!("max_id {}б max_len {}", max_id, max_len);
+
+    // паттерн может быть длиной от 1 до max_len / 2 (так как повтор минимум 2 раза)
+    for pattern_len in 1..=max_len / 2 {
+        let start_pattern = 10_u128.pow(pattern_len - 1);
+        let end_pattern = 10_u128.pow(pattern_len);
+
+        for pattern in start_pattern..end_pattern {
+            let mut current_num = pattern;
+
+            // повторяем паттерн, пока число не станет слишком большим
+            loop {
+                let multiplier = 10_u128.pow(pattern_len);
+
+                // проверка на переполнение перед умножением
+                if current_num > u128::MAX / multiplier {
+                    break;
+                }
+                current_num = current_num * multiplier + pattern;
+
+                if current_num > max_id {
+                    break;
+                }
+
+                //println!("current_num {}", current_num);
+                ids.insert(current_num);
+            }
+        }
+    }
+
+    ids
 }
