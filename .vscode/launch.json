@@ -1,0 +1,20 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "cppvsdbg",
+            "request": "launch",
+            "name": "Debug Rust (MSVC)",
+            "program": "${workspaceFolder}/target/debug/adventofcode2025_on_rust.exe",
+            "args": [],
+            "cwd": "${workspaceFolder}",
+            "environment": [
+                {
+                    "name": "RUST_BACKTRACE",
+                    "value": "full"
+                }
+            ],
+            "stopAtEntry": false
+        }
+    ]
+}
