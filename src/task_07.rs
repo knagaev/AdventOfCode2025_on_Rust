@@ -1,6 +1,6 @@
 use std::collections::{HashSet, VecDeque};
 use std::fs;
-use std::io::{self, BufRead, BufReader, BufWriter, Write};
+use std::io::{self, BufWriter, Write};
 
 #[derive(Debug, Default, Clone)]
 pub struct Splitter {
@@ -64,10 +64,10 @@ pub fn local_main() -> io::Result<()> {
         .step_by(cols)
         .position(|x| x.is_some())
         .unwrap();
-    let first_splitter_pos = first_splitter_row * cols + enter_pos;
+    let first_splitter_idx = first_splitter_row * cols + enter_pos;
 
-    let beams = count_beams(first_splitter_pos, &mut splitters, cols);
-    let timelines = count_timelines(first_splitter_pos, &mut splitters, cols);
+    let beams = count_beams(first_splitter_idx, &splitters, cols);
+    let timelines = count_timelines(first_splitter_idx, &mut splitters, cols);
 
     /*
 
@@ -97,7 +97,7 @@ pub fn local_main() -> io::Result<()> {
 
         println!("Beams split times: {}", total_split_times);
     */
-    println!("Beams: {}", timelines);
+    println!("Beams: {}", beams);
     println!("Timelines: {}", timelines);
     Ok(())
 }
@@ -329,11 +329,11 @@ fn save_splitters_to_file(path: &str, splitters: &[Option<Splitter>]) -> std::io
     Ok(())
 }
 
-fn count_beams(start_idx: usize, splitters: &mut [Option<Splitter>], cols: usize) -> u64 {
+fn count_beams(start_splitter_idx: usize, splitters: &[Option<Splitter>], cols: usize) -> u64 {
     let mut result_beams: HashSet<usize> = HashSet::new();
-    let mut queue: VecDeque<usize> = VecDeque::from([start_idx]);
+    let mut queue: VecDeque<usize> = VecDeque::from([start_splitter_idx]);
 
-    while let Some(&splitter_idx) = queue.front() {
+    while let Some(splitter_idx) = queue.pop_front() {
         let splitter_col = splitter_idx % cols;
         let splitter_opt = &splitters[splitter_idx];
 
@@ -365,9 +365,13 @@ fn count_beams(start_idx: usize, splitters: &mut [Option<Splitter>], cols: usize
     result_beams.len() as u64
 }
 
-fn count_timelines(start_idx: usize, splitters: &mut [Option<Splitter>], cols: usize) -> u64 {
-    let mut stack = vec![start_idx];
-    println!("start_idx {}", start_idx);
+fn count_timelines(
+    start_splitter_idx: usize,
+    splitters: &mut [Option<Splitter>],
+    cols: usize,
+) -> u64 {
+    let mut stack = vec![start_splitter_idx];
+    println!("start_idx {}", start_splitter_idx);
 
     while let Some(&splitter_idx) = stack.last() {
         // Получаем ссылку на текущий сплиттер
@@ -447,7 +451,7 @@ fn count_timelines(start_idx: usize, splitters: &mut [Option<Splitter>], cols: u
     }
 
     // результат - memo стартового сплиттера
-    if let Some(ref s) = splitters[start_idx] {
+    if let Some(ref s) = splitters[start_splitter_idx] {
         s.memo
     } else {
         1
