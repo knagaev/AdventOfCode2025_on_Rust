@@ -1,6 +1,6 @@
-use std::f32::consts::E;
+use std::collections::{HashSet, VecDeque};
 use std::fs;
-use std::io::{self, BufRead, BufReader};
+use std::io::{self, BufRead, BufReader, BufWriter, Write};
 
 #[derive(Debug, Default, Clone)]
 pub struct Splitter {
@@ -8,20 +8,6 @@ pub struct Splitter {
     pub right_splitter: Option<usize>, // Индекс правого потомка в векторе
     pub memo: u64,                     //  Кэш: количество траекторий от этого сплиттера до конца
 }
-
-/*
-pub struct ManifoldTree {
-    pub splitters: Vec<Splitter>,
-}
-
-impl ManifoldTree {
-    pub fn with_capacity(capacity: usize) -> Self {
-        Self {
-            splitters: Vec::with_capacity(capacity),
-        }
-    }
-}
-*/
 
 pub fn local_main() -> io::Result<()> {
     let content = fs::read_to_string("data/input_07_sample.txt")?;
@@ -44,16 +30,15 @@ pub fn local_main() -> io::Result<()> {
     for j in 0..cols {
         for i in 0..rows {
             if manifold[i * cols + j] == '^' {
-                let parent_index = i * cols + j;
+                println!("Сплиттер найден {} {}", i, j);
+                let splitter_index = i * cols + j;
+                let splitter = splitters[splitter_index].get_or_insert_with(Splitter::default);
                 if j > 0 {
                     // левая ветка
                     for k in i + 1..rows {
                         if manifold[k * cols + j - 1] == '^' {
                             let left_child_index = k * cols + j - 1;
-                            if let Some(p) = splitters.get_mut(parent_index) {
-                                p.get_or_insert_with(Splitter::default).left_splitter =
-                                    Some(left_child_index);
-                            }
+                            splitter.left_splitter = Some(left_child_index);
                             break;
                         }
                     }
@@ -63,10 +48,7 @@ pub fn local_main() -> io::Result<()> {
                     for k in i + 1..rows {
                         if manifold[k * cols + j + 1] == '^' {
                             let right_child_index = k * cols + j + 1;
-                            if let Some(p) = splitters.get_mut(parent_index) {
-                                p.get_or_insert_with(Splitter::default).right_splitter =
-                                    Some(right_child_index);
-                            }
+                            splitter.right_splitter = Some(right_child_index);
                             break;
                         }
                     }
@@ -75,81 +57,52 @@ pub fn local_main() -> io::Result<()> {
         }
     }
 
-    /*for s in splitters {
-        println!("{:?}", s);
-    }
+    let _ = save_splitters_to_file("test.txt", &splitters);
 
-    std::process::exit(0);*/
-
-    let mut stack: Vec<usize> = Vec::new();
-    let first_splitter_pos = splitters[enter_pos..]
+    let first_splitter_row = splitters[enter_pos..]
         .iter()
         .step_by(cols)
         .position(|x| x.is_some())
         .unwrap();
-    stack.push(first_splitter_pos);
-    //let mut memo: Vec<u64> = vec![0; manifold.len()];
+    let first_splitter_pos = first_splitter_row * cols + enter_pos;
 
-    let mut timelines: u64 = 0;
+    let beams = count_beams(first_splitter_pos, &mut splitters, cols);
+    let timelines = count_timelines(first_splitter_pos, &mut splitters, cols);
 
-    while !stack.is_empty() {
-        if let Some(&cur_pos) = stack.last() {
-            if let Some(splitter) = splitters.get_mut(cur_pos).unwrap() {
-                if let Some(left_splitter_pos) = splitter.left_splitter {
-                    if let Some(left_splitter) = splitters[left_splitter_pos] {
-                        if left_splitter.memo > 0 {
-                            splitter.memo += left_splitter.memo;
-                        } else {
-                            stack.push(left_splitter_pos);
-                            continue;
-                        }
-                    } else {
-                        panic!("No splitter!");
-                    }
-                } else {
-                    splitter.memo += 1;
-                }
-                if let Some(right_splitter) = splitter.right_splitter {
-                    stack.push(right_splitter);
-                    continue;
-                } else {
-                    splitter.memo += 1;
-                }
-                stack.pop();
-            }
-        } else {
-            panic!("No current splitter");
+    /*
+
+        // Day 1
+        let file_path = String::from("data/input_07.txt");
+        let file = fs::File::open(&file_path)?;
+        let reader = BufReader::new(file);
+
+        let mut lines = reader.lines();
+        let first_line = lines
+            .next()
+            .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "Нет первой строки!"))??;
+        //let tachyon_status = convert_line_to_array(&first_line);
+        let mut tachyon_status = first_line.replace("S", "|");
+        println!("{:?}", tachyon_status);
+        let mut total_split_times: u64 = 0;
+        let mut split_times: u64 = 0;
+        for line in lines {
+            let line = line?;
+            println!("line   _status {:?}", line);
+            //let splitter_line = convert_line_to_array(&line);
+            (tachyon_status, split_times) = process_beam_row(&tachyon_status, &line);
+            total_split_times += split_times;
+            println!("tachyon_status {:?}", tachyon_status);
         }
-    }
+        let grand_total = tachyon_status.chars().filter(|&c| c == '|').count();
 
-    // Day 1
-    let file_path = String::from("data/input_07.txt");
-    let file = fs::File::open(&file_path)?;
-    let reader = BufReader::new(file);
-
-    let mut lines = reader.lines();
-    let first_line = lines
-        .next()
-        .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "Нет первой строки!"))??;
-    //let tachyon_status = convert_line_to_array(&first_line);
-    let mut tachyon_status = first_line.replace("S", "|");
-    println!("{:?}", tachyon_status);
-    let mut total_split_times: u64 = 0;
-    let mut split_times: u64 = 0;
-    for line in lines {
-        let line = line?;
-        println!("line   _status {:?}", line);
-        //let splitter_line = convert_line_to_array(&line);
-        (tachyon_status, split_times) = process_beam_row(&tachyon_status, &line);
-        total_split_times += split_times;
-        println!("tachyon_status {:?}", tachyon_status);
-    }
-
-    let grand_total = tachyon_status.chars().filter(|&c| c == '|').count();
-
-    println!("Beams split times: {}", total_split_times);
+        println!("Beams split times: {}", total_split_times);
+    */
+    println!("Beams: {}", timelines);
+    println!("Timelines: {}", timelines);
     Ok(())
 }
+
+/*
 
 fn process_beam_row(beams: &str, splitters: &str) -> (String, u64) {
     let beam_chars: Vec<char> = beams.chars().collect();
@@ -187,7 +140,6 @@ fn process_beam_row(beams: &str, splitters: &str) -> (String, u64) {
     (new_beams.into_iter().collect(), split_times)
 }
 
-/*
 pub fn local_main() -> io::Result<()> {
     let file_path = String::from("data/input_07.txt");
     let file = fs::File::open(&file_path)?;
@@ -350,10 +302,9 @@ fn count_timelines(manifold: &[char], cols: usize) -> Option<u64> {
     println!("Beam timelines in function: {:?}", timelines);
     Some(timelines)
 }
-*/
 
-/*
-fn save_grid_to_file(path: &str, grid: &[char], cols: usize) -> std::io::Result<()> {
+
+fn save_grid_to_file(path: &str, grid: &[Option<Splitter>], cols: usize) -> std::io::Result<()> {
     let file = fs::File::create(path)?;
     let mut writer = BufWriter::new(file);
 
@@ -366,102 +317,136 @@ fn save_grid_to_file(path: &str, grid: &[char], cols: usize) -> std::io::Result<
     Ok(())
 }
 */
+fn save_splitters_to_file(path: &str, splitters: &[Option<Splitter>]) -> std::io::Result<()> {
+    let file = fs::File::create(path)?;
+    let mut writer = BufWriter::new(file);
 
-fn count_paths_iterative(
-    start_idx: usize,
-    splitters: &mut Vec<Option<Splitter>>,
-    cols: usize,
-) -> u64 {
-    let mut stack = vec![start_idx];
+    for s in splitters {
+        writeln!(writer, "{:?}", s)?;
+    }
 
-    while let Some(&idx) = stack.last() {
-        // Получаем ссылку на текущий сплиттер
-        let splitter_opt = &splitters[idx];
+    writer.flush()?;
+    Ok(())
+}
 
-        // Если сплиттера нет (например, это не '^'), считаем его обработанным с memo=1 и убираем из стека
+fn count_beams(start_idx: usize, splitters: &mut [Option<Splitter>], cols: usize) -> u64 {
+    let mut result_beams: HashSet<usize> = HashSet::new();
+    let mut queue: VecDeque<usize> = VecDeque::from([start_idx]);
+
+    while let Some(&splitter_idx) = queue.front() {
+        let splitter_col = splitter_idx % cols;
+        let splitter_opt = &splitters[splitter_idx];
+
         if splitter_opt.is_none() {
-            stack.pop();
-            continue;
+            panic!("No splitter at {}", splitter_idx);
         }
 
-        let s = splitter_opt.as_ref().unwrap();
-        let col = idx % cols;
+        let splitter = splitter_opt.as_ref().unwrap();
 
-        // Шаг 2: Проверяем левого потомка
-        if let Some(left_idx) = s.left_splitter {
-            if let Some(ref left_s) = splitters[left_idx] {
-                if left_s.memo == 0 {
+        if let Some(left_idx) = splitter.left_splitter {
+            println!("Проверяем левого {:?}", left_idx);
+            queue.push_back(left_idx);
+        } else {
+            if splitter_col > 0 {
+                result_beams.insert(splitter_col - 1);
+            }
+        }
+
+        if let Some(right_idx) = splitter.right_splitter {
+            println!("Проверяем правого {:?}", right_idx);
+            queue.push_back(right_idx);
+        } else {
+            if splitter_col < cols - 1 {
+                result_beams.insert(splitter_col + 1);
+            }
+        }
+    }
+
+    result_beams.len() as u64
+}
+
+fn count_timelines(start_idx: usize, splitters: &mut [Option<Splitter>], cols: usize) -> u64 {
+    let mut stack = vec![start_idx];
+    println!("start_idx {}", start_idx);
+
+    while let Some(&splitter_idx) = stack.last() {
+        // Получаем ссылку на текущий сплиттер
+        let splitter_opt = &splitters[splitter_idx];
+        println!("splitter {:?}", splitter_opt);
+
+        if splitter_opt.is_none() {
+            panic!("No splitter at {}", splitter_idx);
+        }
+
+        let splitter = splitter_opt.as_ref().unwrap();
+        let col = splitter_idx % cols;
+        println!("Splitter {} {}", splitter_idx / cols, col);
+
+        // левый потомок
+        if let Some(left_idx) = splitter.left_splitter {
+            println!("Проверяем левого {:?}", left_idx);
+            if let Some(ref left_splitter) = splitters[left_idx] {
+                println!("Получаем левого {:?}", left_splitter);
+                if left_splitter.memo == 0 {
                     stack.push(left_idx);
                     continue;
                 }
-            } else {
-                // Потомок есть в графе, но в векторе None?
-                // В нашей структуре если left_splitter Some, то и в векторе должен быть Some.
-                // Но для безопасности добавим проверку.
-                stack.push(left_idx);
-                continue;
             }
         }
 
-        // Шаг 3: Проверяем правого потомка
-        if let Some(right_idx) = s.right_splitter {
-            if let Some(ref right_s) = splitters[right_idx] {
-                if right_s.memo == 0 {
+        // правый потомок
+        if let Some(right_idx) = splitter.right_splitter {
+            println!("Проверяем правого {:?}", right_idx);
+            if let Some(ref right_splitter) = splitters[right_idx] {
+                println!("Получаем правого {:?}", right_splitter);
+                if right_splitter.memo == 0 {
                     stack.push(right_idx);
                     continue;
                 }
-            } else {
-                stack.push(right_idx);
-                continue;
             }
         }
 
-        // Шаг 4: Оба потомка готовы (или отсутствуют). Считаем memo.
+        // подсчет траекторий от данного сплиттера
         let mut paths = 0u64;
 
-        // Левая часть
-        if let Some(left_idx) = s.left_splitter {
+        // траектории слева
+        if let Some(left_idx) = splitter.left_splitter {
             if let Some(ref left_s) = splitters[left_idx] {
                 paths += left_s.memo;
             }
         } else {
-            // Нет левого потомка
+            // Нет левого потомка - луч выходит если
             if col > 0 {
+                // сплиттер находится не в крайней колонке слева
                 paths += 1;
             }
         }
 
-        // Правая часть
-        if let Some(right_idx) = s.right_splitter {
+        // траектории справа
+        if let Some(right_idx) = splitter.right_splitter {
             if let Some(ref right_s) = splitters[right_idx] {
                 paths += right_s.memo;
             }
         } else {
-            // Нет правого потомка
+            // Нет правого потомка - луч выходит если
             if col < cols - 1 {
+                // сплиттер находится не в крайней колонке справа
                 paths += 1;
             }
         }
 
-        // Обработка случая листа (нет ни левого, ни правого потомков)
-        if s.left_splitter.is_none() && s.right_splitter.is_none() {
-            if col == 0 || col == cols - 1 {
-                paths = 1;
-            } else {
-                paths = 2;
-            }
-        }
+        println!("Splitter {} {} paths {}", splitter_idx / cols, col, paths);
 
-        // Сохраняем результат
-        if let Some(ref mut s_mut) = splitters[idx] {
+        // запись в memo
+        if let Some(ref mut s_mut) = splitters[splitter_idx] {
             s_mut.memo = paths;
         }
 
-        // Шаг 5: Выталкиваем обработанный узел
+        // возврат вверх из обработанного сплиттера
         stack.pop();
     }
 
-    // Возвращаем результат стартового узла
+    // результат - memo стартового сплиттера
     if let Some(ref s) = splitters[start_idx] {
         s.memo
     } else {

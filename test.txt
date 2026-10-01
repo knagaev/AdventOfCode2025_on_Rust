@@ -35,7 +35,7 @@ None
 None
 None
 None
-Some(Splitter { left_splitter: Some(66), right_splitter: Some(68), parent_splitter: None })
+Some(Splitter { left_splitter: Some(66), right_splitter: Some(68), memo: 0 })
 None
 None
 None
@@ -64,9 +64,9 @@ None
 None
 None
 None
-Some(Splitter { left_splitter: Some(95), right_splitter: Some(97), parent_splitter: Some(37) })
+Some(Splitter { left_splitter: Some(95), right_splitter: Some(97), memo: 0 })
 None
-Some(Splitter { left_splitter: Some(97), right_splitter: Some(99), parent_splitter: Some(37) })
+Some(Splitter { left_splitter: Some(97), right_splitter: Some(99), memo: 0 })
 None
 None
 None
@@ -93,11 +93,11 @@ None
 None
 None
 None
-Some(Splitter { left_splitter: Some(124), right_splitter: Some(126), parent_splitter: Some(66) })
+Some(Splitter { left_splitter: Some(124), right_splitter: Some(126), memo: 0 })
 None
-Some(Splitter { left_splitter: Some(126), right_splitter: None, parent_splitter: Some(68) })
+Some(Splitter { left_splitter: Some(126), right_splitter: None, memo: 0 })
 None
-Some(Splitter { left_splitter: None, right_splitter: Some(130), parent_splitter: Some(68) })
+Some(Splitter { left_splitter: None, right_splitter: Some(130), memo: 0 })
 None
 None
 None
@@ -122,13 +122,13 @@ None
 None
 None
 None
-Some(Splitter { left_splitter: Some(153), right_splitter: Some(155), parent_splitter: Some(95) })
+Some(Splitter { left_splitter: Some(153), right_splitter: Some(155), memo: 0 })
 None
-Some(Splitter { left_splitter: Some(155), right_splitter: Some(217), parent_splitter: Some(97) })
+Some(Splitter { left_splitter: Some(155), right_splitter: Some(217), memo: 0 })
 None
 None
 None
-Some(Splitter { left_splitter: Some(159), right_splitter: Some(161), parent_splitter: Some(99) })
+Some(Splitter { left_splitter: Some(159), right_splitter: Some(161), memo: 0 })
 None
 None
 None
@@ -151,15 +151,15 @@ None
 None
 None
 None
-Some(Splitter { left_splitter: Some(182), right_splitter: None, parent_splitter: Some(124) })
+Some(Splitter { left_splitter: Some(182), right_splitter: None, memo: 0 })
 None
-Some(Splitter { left_splitter: None, right_splitter: Some(186), parent_splitter: Some(126) })
+Some(Splitter { left_splitter: None, right_splitter: Some(186), memo: 0 })
 None
 None
 None
-Some(Splitter { left_splitter: None, right_splitter: None, parent_splitter: Some(130) })
+Some(Splitter { left_splitter: None, right_splitter: None, memo: 0 })
 None
-Some(Splitter { left_splitter: None, right_splitter: Some(192), parent_splitter: Some(130) })
+Some(Splitter { left_splitter: None, right_splitter: Some(192), memo: 0 })
 None
 None
 None
@@ -180,17 +180,17 @@ None
 None
 None
 None
-Some(Splitter { left_splitter: Some(211), right_splitter: Some(213), parent_splitter: Some(153) })
+Some(Splitter { left_splitter: Some(211), right_splitter: Some(213), memo: 0 })
 None
 None
 None
-Some(Splitter { left_splitter: Some(215), right_splitter: Some(217), parent_splitter: Some(155) })
+Some(Splitter { left_splitter: Some(215), right_splitter: Some(217), memo: 0 })
 None
 None
 None
 None
 None
-Some(Splitter { left_splitter: None, right_splitter: Some(223), parent_splitter: Some(161) })
+Some(Splitter { left_splitter: None, right_splitter: Some(223), memo: 0 })
 None
 None
 None
@@ -209,19 +209,19 @@ None
 None
 None
 None
-Some(Splitter { left_splitter: None, right_splitter: None, parent_splitter: Some(182) })
+Some(Splitter { left_splitter: None, right_splitter: None, memo: 0 })
 None
-Some(Splitter { left_splitter: None, right_splitter: None, parent_splitter: Some(182) })
+Some(Splitter { left_splitter: None, right_splitter: None, memo: 0 })
 None
-Some(Splitter { left_splitter: None, right_splitter: None, parent_splitter: Some(186) })
+Some(Splitter { left_splitter: None, right_splitter: None, memo: 0 })
 None
-Some(Splitter { left_splitter: None, right_splitter: None, parent_splitter: Some(186) })
+Some(Splitter { left_splitter: None, right_splitter: None, memo: 0 })
 None
+Some(Splitter { left_splitter: None, right_splitter: None, memo: 0 })
 None
 None
 None
-None
-Some(Splitter { left_splitter: None, right_splitter: None, parent_splitter: Some(192) })
+Some(Splitter { left_splitter: None, right_splitter: None, memo: 0 })
 None
 None
 None
