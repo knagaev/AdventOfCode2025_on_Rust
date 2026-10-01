@@ -1,4 +1,4 @@
-use std::collections::{HashSet, VecDeque};
+use std::collections::HashSet;
 use std::fs;
 use std::io::{self, BufWriter, Write};
 
@@ -88,32 +88,19 @@ fn save_splitters_to_file(path: &str, splitters: &[Option<Splitter>]) -> std::io
 }
 
 fn count_splits(start_splitter_idx: usize, splitters: &[Option<Splitter>]) -> u64 {
-    let mut result_splits: HashSet<usize> = HashSet::new();
-    let mut queue: VecDeque<usize> = VecDeque::from([start_splitter_idx]);
+    let mut splits: HashSet<usize> = HashSet::from([start_splitter_idx]);
 
-    while let Some(splitter_idx) = queue.pop_front() {
-        result_splits.insert(splitter_idx);
-        println!("splitter_idx {:?}", splitter_idx);
-        let splitter_opt = &splitters[splitter_idx];
-
-        if splitter_opt.is_none() {
-            panic!("No splitter at {}", splitter_idx);
-        }
-
-        let splitter = splitter_opt.as_ref().unwrap();
-
-        if let Some(left_idx) = splitter.left_splitter {
-            println!("Добавляем левого {:?}", left_idx);
-            queue.push_back(left_idx);
-        }
-
-        if let Some(right_idx) = splitter.right_splitter {
-            println!("Добавляем правого {:?}", right_idx);
-            queue.push_back(right_idx);
-        }
+    let mut front: HashSet<usize> = HashSet::from([start_splitter_idx]);
+    while !front.is_empty() {
+        splits.extend(&front);
+        front = front
+            .iter()
+            .filter_map(|&idx| splitters[idx].as_ref())
+            .flat_map(|s| s.left_splitter.into_iter().chain(s.right_splitter))
+            .collect::<HashSet<_>>();
     }
 
-    result_splits.len() as u64
+    splits.len() as u64
 }
 
 fn count_timelines(
