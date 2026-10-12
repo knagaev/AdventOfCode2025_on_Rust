@@ -1,7 +1,7 @@
-mod task_092;
+mod task_09;
 
 use std::io;
 
 fn main() -> io::Result<()> {
-    task_092::local_main()
+    task_09::local_main()
 }
