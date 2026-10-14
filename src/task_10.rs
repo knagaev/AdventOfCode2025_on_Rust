@@ -194,8 +194,8 @@ fn solve(machine: &Machine) -> Option<(Vec<Vec<u8>>, usize)> {
         .unwrap_or(0) as usize; // Если решений нет (хотя мы уже проверили совместность), берем 0
 
     println!(
-        "target_mask: {:?} min_presses: {:?}",
-        target_mask, min_presses
+        "target_mask: {:?} min_presses: {:?} solutions {:?}",
+        target_mask, min_presses, solutions
     );
     Some((solutions, min_presses))
 }
