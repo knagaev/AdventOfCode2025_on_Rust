@@ -4,8 +4,10 @@ use std::io::{self, BufRead, BufReader};
 #[derive(Debug, Clone)]
 struct Machine {
     num_lights: usize,
-    target_mask: u64,       // битовая маска целевого состояния
-    button_masks: Vec<u64>, // битовые маски для каждой кнопки
+    target_mask: u64,                 // битовая маска целевого состояния
+    button_masks: Vec<u64>,           // битовые маски для каждой кнопки
+    joltage: Vec<u32>,                // требования по счетчикам
+    button_counters: Vec<Vec<usize>>, // кнопка → список счетчиков
 }
 
 fn parse_line(line: &str) -> Option<Machine> {
@@ -28,6 +30,7 @@ fn parse_line(line: &str) -> Option<Machine> {
 
     // 2. Парсим кнопки (все токены кроме первого и последнего)
     let mut button_masks = Vec::new();
+    let mut button_counters = Vec::new();
     for &token in &tokens[1..tokens.len() - 1] {
         // token вида "(1,3)" или "(0)"
         let content = &token[1..token.len() - 1]; // "1,3" или "0"
@@ -38,21 +41,39 @@ fn parse_line(line: &str) -> Option<Machine> {
             .fold(0u64, |mask, i| mask | (1 << i));
 
         button_masks.push(mask);
+
+        // Для Part Two — список индексов счетчиков
+        let counters: Vec<usize> = content
+            .split(',')
+            .filter_map(|s| s.trim().parse::<usize>().ok())
+            .collect();
+        button_counters.push(counters);
     }
+
+    let joltage_token = tokens[tokens.len() - 1]; // "{3,5,4,7}"
+    let joltage_content = &joltage_token[1..joltage_token.len() - 1]; // "3,5,4,7"
+    let joltage: Vec<u32> = joltage_content
+        .split(',')
+        .filter_map(|s| s.trim().parse::<u32>().ok())
+        .collect();
 
     Some(Machine {
         num_lights,
         target_mask,
         button_masks,
+        joltage,
+        button_counters,
     })
 }
 
 // решение одной машины
-fn solve(machine: &Machine) -> Option<usize> {
+fn solve(machine: &Machine) -> Option<(Vec<Vec<u8>>, usize)> {
     let Machine {
         num_lights,
         target_mask,
         button_masks,
+        joltage: _,
+        button_counters: _,
     } = machine;
 
     let num_buttons = button_masks.len();
@@ -84,7 +105,6 @@ fn solve(machine: &Machine) -> Option<usize> {
             *light |= 1 << num_buttons;
         }
     }
-    println!("{:?}", augmented);
 
     let mut pivot_row = 0;
     let mut pivot_cols: Vec<usize> = Vec::new(); // отслеживаем ведущие колонки
@@ -139,7 +159,7 @@ fn solve(machine: &Machine) -> Option<usize> {
     let num_free = free_vars.len();
     let total_combinations = 1usize << num_free; // 2^k
 
-    let min_presses = (0..total_combinations)
+    let solutions: Vec<Vec<u8>> = (0..total_combinations)
         .map(|mask| {
             let mut solution = vec![0u8; num_buttons];
 
@@ -163,17 +183,25 @@ fn solve(machine: &Machine) -> Option<usize> {
             }
 
             // Считаем сумму нажатий
-            solution.iter().map(|&x| x as usize).sum::<usize>()
+            solution
         })
-        .min()
-        .unwrap_or(0); // Если решений нет (хотя мы уже проверили совместность), берем 0
+        .collect();
 
-    println!("{:?}", min_presses);
-    Some(min_presses)
+    let min_presses = solutions
+        .iter()
+        .map(|x| x.iter().sum::<u8>())
+        .min()
+        .unwrap_or(0) as usize; // Если решений нет (хотя мы уже проверили совместность), берем 0
+
+    println!(
+        "target_mask: {:?} min_presses: {:?}",
+        target_mask, min_presses
+    );
+    Some((solutions, min_presses))
 }
 
 pub fn local_main() -> io::Result<()> {
-    const FILE_PATH: &str = "data/input_10.txt";
+    const FILE_PATH: &str = "data/input_10_sample2.txt";
     let file = fs::File::open(FILE_PATH)?;
     let reader = BufReader::new(file);
 
@@ -187,12 +215,20 @@ pub fn local_main() -> io::Result<()> {
         }
     }
 
-    println!("{:?} ", machines[0]);
+    let result = machines.iter().try_fold(0usize, |acc, machine| {
+        solve(machine).map(|(_, val)| acc + val)
+    });
+    println!("Part One: {:?} ", result);
 
-    let result = machines
+    let result2 = machines
         .iter()
-        .try_fold(0usize, |acc, machine| solve(machine).map(|val| acc + val));
-    println!("{:?} ", result);
+        .try_fold(0u32, |acc, m| solve_part2(m).map(|v| acc + v));
+
+    println!("Part Two: {:?}", result2);
 
     Ok(())
+}
+
+fn solve_part2(machine: &Machine) -> Option<u32> {
+    Some(0)
 }
